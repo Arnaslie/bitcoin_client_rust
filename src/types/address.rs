@@ -1,4 +1,9 @@
 use serde::{Serialize, Deserialize};
+use ring::digest;
+use std::convert::TryInto;
+use rand::Rng;
+use rand::distributions::{Distribution, Standard};
+
 
 // 20-byte address
 #[derive(Eq, PartialEq, Serialize, Deserialize, Clone, Hash, Default, Copy)]
@@ -46,9 +51,22 @@ impl std::fmt::Debug for Address {
     }
 }
 
+fn to_sliceSized(slice: &[u8]) -> &[u8; 20] {
+    slice.try_into().expect("slice with incorrect length")
+}
+
 impl Address {
+    
+    pub fn to_sliceSized(slice: &[u8]) -> &[u8; 20] {
+        slice.try_into().expect("slice with incorrect length")
+    }
+
     pub fn from_public_key_bytes(bytes: &[u8]) -> Address {
-        unimplemented!()
+        let digest_ = digest::digest(&digest::SHA256, bytes);
+        let intermediate = &digest_.as_ref()[12 .. digest_.as_ref().len()];
+        let hash  = to_sliceSized(intermediate);
+        let addr = Address::from(hash);   
+        return addr;
     }
 }
 // DO NOT CHANGE THIS COMMENT, IT IS FOR AUTOGRADER. BEFORE TEST
