@@ -1,59 +1,51 @@
 use serde::{Serialize,Deserialize};
 use ring::signature::{Ed25519KeyPair, Signature, KeyPair, VerificationAlgorithm, EdDSAParameters, self};
-use rand::{thread_rng, Rng};
-use rand::distributions::{Distribution, Standard};
-use ring::digest;
+use rand::Rng;
+
 use super::address::Address;
+use super::hash::{H256, Hashable};
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct Transaction {
     sender: Address,
     receiver: Address,
-    value: i32,
+    value: i32
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct SignedTransaction {
+    transaction: Transaction,
+    signature: Vec<u8>,
+    public_key: Vec<u8>
+}
 
+impl Hashable for SignedTransaction {
+    fn hash(&self) -> H256 {
+        let serialized = bincode::serialize(self).unwrap();
+        ring::digest::digest(&ring::digest::SHA256, &serialized).into()
+    }
 }
 
 /// Create digital signature of a transaction
 pub fn sign(t: &Transaction, key: &Ed25519KeyPair) -> Signature {
-    let serialized = bincode::serialize(t).unwrap();
-    let message = digest::digest(&digest::SHA256, digest::digest(&digest::SHA256, serialized.as_ref()).as_ref());
-    let sign = key.sign(message.as_ref());
-    return sign;
+    let serialized_transaction: Vec<u8> = bincode::serialize(&t).unwrap();
+    return key.sign(&serialized_transaction);
 }
 
 /// Verify digital signature of a transaction, using public key instead of secret key
 pub fn verify(t: &Transaction, public_key: &[u8], signature: &[u8]) -> bool {
-    let mut key_flag: bool = true;
-    let serialized = bincode::serialize(t).unwrap();
-    let msg = digest::digest(&digest::SHA256, digest::digest(&digest::SHA256, serialized.as_ref()).as_ref());
-    let public_key_check = signature::UnparsedPublicKey::new(&signature::ED25519, public_key.as_ref());
-    key_flag = public_key_check.verify(msg.as_ref(), signature.as_ref()).is_ok();
-    return key_flag;
+    let serialized_transaction: Vec<u8> = bincode::serialize(&t).unwrap();
+    let pub_key = signature::UnparsedPublicKey::new(&signature::ED25519, public_key);
+    return pub_key.verify(&serialized_transaction, signature).is_ok();
 }
 
 #[cfg(any(test, test_utilities))]
-
 pub fn generate_random_transaction() -> Transaction {
-    use crate::types::key_pair;
-    use super::address::Address;
-    let mut rng = thread_rng();
-    let rnd_value: i32 = rng.gen();
-
-    let key_send = key_pair::random();
-    let public_key_send = key_send.public_key();
-    let rnd_sender = super::address::Address::from_public_key_bytes(public_key_send.as_ref());
-
-    let key_receive = key_pair::random();
-    let public_key_receive = key_receive.public_key();
-  
-    let rnd_receiver = super::address::Address::from_public_key_bytes(public_key_receive.as_ref());
-
-    let t = Transaction {sender: rnd_sender, receiver: rnd_receiver, value: rnd_value};
-    return t;
+    let mut rng = rand::thread_rng();
+    let random_value: i32 = rng.gen::<i32>();
+    let random_receiver: [u8; 20] = rng.gen::<[u8; 20]>();
+    let random_sender: [u8; 20] = rng.gen::<[u8; 20]>();
+    return Transaction {sender: Address::from(random_sender), receiver: Address::from(random_receiver), value: random_value};
 }
 
 // DO NOT CHANGE THIS COMMENT, IT IS FOR AUTOGRADER. BEFORE TEST
