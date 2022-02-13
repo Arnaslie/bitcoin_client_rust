@@ -16,9 +16,6 @@ use crate::types::hash::{H256, Hashable};
 use rand::Rng;
 use crate::types::merkle::MerkleTree;
 
-
-
-
 enum ControlSignal {
     Start(u64), // the number controls the lambda of interval between block generation
     Update, // update the block in mining, it may due to new blockchain tip or new transaction
@@ -37,6 +34,7 @@ pub struct Context {
     operating_state: OperatingState,
     finished_block_chan: Sender<Block>,
     blockchain: Arc<Mutex<Blockchain>>,
+    tip: H256
 }
 
 #[derive(Clone)]
@@ -54,6 +52,7 @@ pub fn new(blockchain: &Arc<Mutex<Blockchain>>) -> (Context, Handle, Receiver<Bl
         operating_state: OperatingState::Paused,
         finished_block_chan: finished_block_sender,
         blockchain: Arc::clone(blockchain),
+        tip: blockchain.lock().unwrap().tip()
     };
 
     let handle = Handle {
@@ -65,7 +64,9 @@ pub fn new(blockchain: &Arc<Mutex<Blockchain>>) -> (Context, Handle, Receiver<Bl
 
 #[cfg(any(test,test_utilities))]
 fn test_new() -> (Context, Handle, Receiver<Block>) {
-    new()
+    let blockchain = Blockchain::new();
+    let blockchain = Arc::new(Mutex::new(blockchain));
+    return new(&blockchain);
 }
 
 impl Handle {
@@ -146,7 +147,8 @@ impl Context {
 
             // TODO for student: actual mining, create a block
             // TODO for student: if block mining finished, you can have something like: self.finished_block_chan.send(block.clone()).expect("Send finished block error");
-            let mut parent_ = self.blockchain.lock().unwrap().tip();
+            // let mut parent_ = self.blockchain.lock().unwrap().tip();
+            let mut parent_ = self.tip;
             let start = SystemTime::now();
             let mut rng = rand::thread_rng();
             let timestamp_ = start.duration_since(UNIX_EPOCH).expect("Time went backwards").as_millis();
@@ -168,6 +170,7 @@ impl Context {
                 content: content_
             };
             if block.hash() <= difficulty_ {
+                self.tip = block.hash();
                 self.finished_block_chan.send(block.clone()).expect("Send finished block error");
             }
 
@@ -196,6 +199,20 @@ mod test {
         miner_handle.start(0);
         let mut block_prev = finished_block_chan.recv().unwrap();
         for _ in 0..2 {
+            let block_next = finished_block_chan.recv().unwrap();
+            assert_eq!(block_prev.hash(), block_next.get_parent());
+            block_prev = block_next;
+        }
+    }
+    
+    #[test]
+    #[timeout(60000)]
+    fn miner_ten_block() {
+        let (miner_ctx, miner_handle, finished_block_chan) = super::test_new();
+        miner_ctx.start();
+        miner_handle.start(0);
+        let mut block_prev = finished_block_chan.recv().unwrap();
+        for _ in 0..9 {
             let block_next = finished_block_chan.recv().unwrap();
             assert_eq!(block_prev.hash(), block_next.get_parent());
             block_prev = block_next;

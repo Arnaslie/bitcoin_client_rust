@@ -37,7 +37,7 @@ impl Worker {
         info!("Miner initialized into paused mode");
     }
 
-    fn worker_loop(&'static self) {
+    fn worker_loop(&self) {
         loop {
             let _block = self.finished_block_chan.recv().expect("Receive finished block error");
             // TODO for student: insert this finished block to blockchain, and broadcast this block hash
