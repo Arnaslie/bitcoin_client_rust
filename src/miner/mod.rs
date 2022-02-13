@@ -7,7 +7,17 @@ use std::time;
 
 use std::thread;
 
-use crate::types::block::Block;
+use crate::types::block::{Block, Header, Content};
+use crate::blockchain::Blockchain;
+use crate::types::transaction::SignedTransaction;
+use std::sync::{Arc, Mutex};
+use std::time::{SystemTime, UNIX_EPOCH};
+use crate::types::hash::{H256, Hashable};
+use rand::Rng;
+use crate::types::merkle::MerkleTree;
+
+
+
 
 enum ControlSignal {
     Start(u64), // the number controls the lambda of interval between block generation
@@ -26,6 +36,7 @@ pub struct Context {
     control_chan: Receiver<ControlSignal>,
     operating_state: OperatingState,
     finished_block_chan: Sender<Block>,
+    blockchain: Arc<Mutex<Blockchain>>,
 }
 
 #[derive(Clone)]
@@ -34,7 +45,7 @@ pub struct Handle {
     control_chan: Sender<ControlSignal>,
 }
 
-pub fn new() -> (Context, Handle, Receiver<Block>) {
+pub fn new(blockchain: &Arc<Mutex<Blockchain>>) -> (Context, Handle, Receiver<Block>) {
     let (signal_chan_sender, signal_chan_receiver) = unbounded();
     let (finished_block_sender, finished_block_receiver) = unbounded();
 
@@ -42,6 +53,7 @@ pub fn new() -> (Context, Handle, Receiver<Block>) {
         control_chan: signal_chan_receiver,
         operating_state: OperatingState::Paused,
         finished_block_chan: finished_block_sender,
+        blockchain: Arc::clone(blockchain),
     };
 
     let handle = Handle {
@@ -134,6 +146,30 @@ impl Context {
 
             // TODO for student: actual mining, create a block
             // TODO for student: if block mining finished, you can have something like: self.finished_block_chan.send(block.clone()).expect("Send finished block error");
+            let mut parent_ = self.blockchain.lock().unwrap().tip();
+            let start = SystemTime::now();
+            let mut rng = rand::thread_rng();
+            let timestamp_ = start.duration_since(UNIX_EPOCH).expect("Time went backwards").as_millis();
+            let difficulty_: H256 = [255u8; 32].into();
+            let merkle_tree_ = MerkleTree::new(&Vec::<SignedTransaction>::new());
+            let nonce_ = rng.gen::<u32>();
+            let header_ = Header {
+                parent: parent_,
+                nonce: nonce_,
+                difficulty: difficulty_,
+                timestamp: timestamp_,
+                merkle_root: merkle_tree_.root()
+            };
+            let content_ = Content {
+                data: Vec::<SignedTransaction>::new()
+            };
+            let block = Block {
+                header: header_,
+                content: content_
+            };
+            if block.hash() <= difficulty_ {
+                self.finished_block_chan.send(block.clone()).expect("Send finished block error");
+            }
 
             if let OperatingState::Run(i) = self.operating_state {
                 if i != 0 {

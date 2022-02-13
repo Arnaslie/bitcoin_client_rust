@@ -23,7 +23,7 @@ impl Blockchain {
         let start = SystemTime::now();
         let genesis_timestamp = start.duration_since(UNIX_EPOCH).expect("Time went backwards").as_micros();
         let genesis_merkle_tree = MerkleTree::new(&Vec::<SignedTransaction>::new());
-        let genesis_difficulty = H256::from(rng.gen::<[u8; 32]>());
+        let genesis_difficulty = [255u8; 32].into();
         let genesis_nonce = rng.gen::<u32>();
         let genesis_height = 0;
 
