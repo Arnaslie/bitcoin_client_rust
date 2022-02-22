@@ -1,7 +1,10 @@
 use super::message::Message;
 use super::peer;
 use super::server::Handle as ServerHandle;
-use crate::types::hash::H256;
+use crate::types::block::Block;
+use crate::types::hash::{H256, Hashable};
+use std::sync::{Arc, Mutex};
+use crate::blockchain::Blockchain;
 
 use log::{debug, warn, error};
 
@@ -16,19 +19,21 @@ pub struct Worker {
     msg_chan: smol::channel::Receiver<(Vec<u8>, peer::Handle)>,
     num_worker: usize,
     server: ServerHandle,
+    blockchain: Arc<Mutex<Blockchain>>,
 }
-
 
 impl Worker {
     pub fn new(
         num_worker: usize,
         msg_src: smol::channel::Receiver<(Vec<u8>, peer::Handle)>,
         server: &ServerHandle,
+        blockchain: &Arc<Mutex<Blockchain>>,
     ) -> Self {
         Self {
             msg_chan: msg_src,
             num_worker,
             server: server.clone(),
+            blockchain: Arc::clone(blockchain),
         }
     }
 
@@ -61,6 +66,47 @@ impl Worker {
                 Message::Pong(nonce) => {
                     debug!("Pong: {}", nonce);
                 }
+                Message::NewBlockHashes(block_hashes) => {
+                    let mut missing_blocks: Vec<H256> = Vec::<H256>::new();
+                    let blockchain = self.blockchain.lock().unwrap(); 
+                    for block in block_hashes {
+                        if !blockchain.block_map.contains_key(&block) {
+                            missing_blocks.push(block);
+                        }
+                    }
+                    //https://piazza.com/class/kykjhx727ab1ge?cid=84
+                    if missing_blocks.len() != 0 {
+                        peer.write(Message::GetBlocks(missing_blocks));
+                    }
+                }
+                Message::GetBlocks(blocks) => {
+                    let mut send_blocks: Vec<Block> = Vec::<Block>::new();
+                    let blockchain = self.blockchain.lock().unwrap(); 
+                    for block in blocks {
+                        if blockchain.block_map.contains_key(&block) {
+                            let result: &(Block, u32) = blockchain.block_map.get(&block).unwrap();
+                            send_blocks.push(result.0.clone());
+                        }
+                    }
+                    //https://piazza.com/class/kykjhx727ab1ge?cid=84
+                    if send_blocks.len() != 0 {
+                        peer.write(Message::Blocks(send_blocks));
+                    }
+                }
+                Message::Blocks(blocks) => {
+                    let mut broadcast_blocks: Vec<H256> = Vec::<H256>::new();
+                    let mut blockchain = self.blockchain.lock().unwrap(); 
+                    for block in blocks {
+                        if !blockchain.block_map.contains_key(&block.hash()) {
+                            blockchain.insert(&block);
+                            broadcast_blocks.push(block.hash());
+                        }
+                    }
+                    //https://piazza.com/class/kykjhx727ab1ge?cid=84
+                    if broadcast_blocks.len() != 0 {
+                        self.server.broadcast(Message::NewBlockHashes(broadcast_blocks));
+                    }
+                }
                 _ => unimplemented!(),
             }
         }
@@ -90,9 +136,12 @@ impl TestMsgSender {
 fn generate_test_worker_and_start() -> (TestMsgSender, ServerTestReceiver, Vec<H256>) {
     let (server, server_receiver) = ServerHandle::new_for_test();
     let (test_msg_sender, msg_chan) = TestMsgSender::new();
-    let worker = Worker::new(1, msg_chan, &server);
+    let blockchain = Blockchain::new();
+    let blockchain = Arc::new(Mutex::new(blockchain));
+    let tip = blockchain.lock().unwrap().tip();
+    let worker = Worker::new(1, msg_chan, &server, &blockchain);
     worker.start(); 
-    (test_msg_sender, server_receiver, vec![])
+    (test_msg_sender, server_receiver, vec![tip])
 }
 
 // DO NOT CHANGE THIS COMMENT, IT IS FOR AUTOGRADER. BEFORE TEST
@@ -101,7 +150,7 @@ fn generate_test_worker_and_start() -> (TestMsgSender, ServerTestReceiver, Vec<H
 mod test {
     use ntest::timeout;
     use crate::types::block::generate_random_block;
-    use crate::types::hash::Hashable;
+    use crate::types::hash::{Hashable, H256};
 
     use super::super::message::Message;
     use super::generate_test_worker_and_start;
@@ -115,6 +164,32 @@ mod test {
         let reply = peer_receiver.recv();
         if let Message::GetBlocks(v) = reply {
             assert_eq!(v, vec![random_block.hash()]);
+        } else {
+            panic!();
+        }
+    }
+    #[test]
+    #[timeout(60000)]
+    //test with blocks already in the chain and new blocks together
+    fn reply_new_block_hashes_more_blocks() {
+        let (test_msg_sender, _server_receiver, v) = generate_test_worker_and_start();
+        let random_block = generate_random_block(v.last().unwrap());
+        let mut peer_receiver = test_msg_sender.send(Message::NewBlockHashes(vec![random_block.hash()]));
+        let reply = peer_receiver.recv();
+        if let Message::GetBlocks(v) = reply {
+            assert_eq!(v, vec![random_block.hash()]);
+        } else {
+            panic!();
+        }
+
+        let genesis: &H256 = v.last().unwrap();
+        let block2 = generate_random_block(&random_block.hash());
+        let block3 = generate_random_block(&block2.hash());
+        let block4 = generate_random_block(&block3.hash());
+        peer_receiver = test_msg_sender.send(Message::NewBlockHashes(vec![*genesis, random_block.hash(), block2.hash(), block3.hash(), block4.hash()]));
+        let reply2 = peer_receiver.recv();
+        if let Message::GetBlocks(v) = reply2 {
+            assert_eq!(v, vec![random_block.hash(), block2.hash(), block3.hash(), block4.hash()]);
         } else {
             panic!();
         }
@@ -135,6 +210,33 @@ mod test {
     }
     #[test]
     #[timeout(60000)]
+    //send blocks that don't exist in the chain
+    fn reply_get_blocks_more_blocks() {
+        let (test_msg_sender, _server_receiver, v) = generate_test_worker_and_start();
+        let h = v.last().unwrap().clone();
+        let mut peer_receiver = test_msg_sender.send(Message::GetBlocks(vec![h.clone()]));
+        let reply = peer_receiver.recv();
+        if let Message::Blocks(v) = reply {
+            assert_eq!(1, v.len());
+            assert_eq!(h, v[0].hash())
+        } else {
+            panic!();
+        }
+
+        let block2 = generate_random_block(&v.last().unwrap());
+        let block3 = generate_random_block(&block2.hash());
+        let block4 = generate_random_block(&block3.hash());
+        peer_receiver = test_msg_sender.send(Message::GetBlocks(vec![h.clone(), block2.hash(), block3.hash(), block4.hash()]));
+        let reply2 = peer_receiver.recv();
+        if let Message::Blocks(v) = reply2 {
+            assert_eq!(1, v.len());
+            assert_eq!(h, v[0].hash())
+        } else {
+            panic!();
+        }
+    }
+    #[test]
+    #[timeout(60000)]
     fn reply_blocks() {
         let (test_msg_sender, server_receiver, v) = generate_test_worker_and_start();
         let random_block = generate_random_block(v.last().unwrap());
@@ -142,6 +244,31 @@ mod test {
         let reply = server_receiver.recv().unwrap();
         if let Message::NewBlockHashes(v) = reply {
             assert_eq!(v, vec![random_block.hash()]);
+        } else {
+            panic!();
+        }
+    }
+    #[test]
+    #[timeout(60000)]
+    //test sending blocks that are already in the chain and new blocks together
+    fn reply_blocks_existing_blocks() {
+        let (test_msg_sender, server_receiver, v) = generate_test_worker_and_start();
+        let random_block = generate_random_block(v.last().unwrap());
+        let mut _peer_receiver = test_msg_sender.send(Message::Blocks(vec![random_block.clone()]));
+        let reply = server_receiver.recv().unwrap();
+        if let Message::NewBlockHashes(v) = reply {
+            assert_eq!(v, vec![random_block.hash()]);
+        } else {
+            panic!();
+        }
+
+        let block2 = generate_random_block(&v.last().unwrap());
+        let block3 = generate_random_block(&block2.hash());
+        let block4 = generate_random_block(&block3.hash());
+        _peer_receiver = test_msg_sender.send(Message::Blocks(vec![random_block.clone(), block2.clone(), block3.clone(), block4.clone()]));
+        let reply2 = server_receiver.recv().unwrap();
+        if let Message::NewBlockHashes(v) = reply2 {
+            assert_eq!(v, vec![block2.hash(), block3.hash(), block4.hash()]);
         } else {
             panic!();
         }

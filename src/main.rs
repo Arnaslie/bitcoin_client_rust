@@ -13,6 +13,7 @@ use clap::clap_app;
 use smol::channel;
 use log::{error, info};
 use api::Server as ApiServer;
+use types::block;
 use std::net;
 use std::process;
 use std::sync::{Arc, Mutex};
@@ -77,6 +78,7 @@ fn main() {
         p2p_workers,
         msg_rx,
         &server,
+        &blockchain
     );
     worker_ctx.start();
 
