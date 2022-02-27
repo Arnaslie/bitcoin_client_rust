@@ -4,7 +4,7 @@ use super::server::Handle as ServerHandle;
 use crate::types::block::Block;
 use crate::types::hash::{H256, Hashable};
 use std::sync::{Arc, Mutex};
-use crate::blockchain::Blockchain;
+use crate::blockchain::{Blockchain, DIFFICULTY};
 
 use log::{debug, warn, error};
 
@@ -20,6 +20,18 @@ pub struct Worker {
     num_worker: usize,
     server: ServerHandle,
     blockchain: Arc<Mutex<Blockchain>>,
+}
+
+pub struct OrphanBuffer {
+    pub orphans: Vec<Block>
+}
+
+impl OrphanBuffer {
+    pub fn new() -> Self {
+        return Self {
+            orphans: Vec::<Block>::new()
+        }
+    }
 }
 
 impl Worker {
@@ -95,12 +107,50 @@ impl Worker {
                 }
                 Message::Blocks(blocks) => {
                     let mut broadcast_blocks: Vec<H256> = Vec::<H256>::new();
-                    let mut blockchain = self.blockchain.lock().unwrap(); 
+                    let mut parent_blocks: Vec<H256> = Vec::<H256>::new();
+                    let mut blockchain = self.blockchain.lock().unwrap();
+                    //process_blocks represents blocks to process for orphan blocks
+                    let mut process_blocks = Vec::<Block>::new();
+                    let mut orphan_buffer: OrphanBuffer = OrphanBuffer::new();
                     for block in blocks {
                         if !blockchain.block_map.contains_key(&block.hash()) {
-                            blockchain.insert(&block);
-                            broadcast_blocks.push(block.hash());
+                            //Proof of Work
+                            if !(block.hash() <= DIFFICULTY.into()) {
+                                continue;
+                            }
+                            
+                            //Parent Check/Orphan Block Check
+                            let parent_hash = block.get_parent();
+                            if blockchain.block_map.contains_key(&parent_hash) {
+                                blockchain.insert(&block);
+                                broadcast_blocks.push(block.hash());
+                                //need to check for orphans
+                                process_blocks.push(block.clone());
+                            } else {
+                                orphan_buffer.orphans.push(block.clone());
+                                parent_blocks.push(parent_hash.clone());
+                            }
+
+                            //Orphan Buffer Check
+                            while !process_blocks.is_empty() {
+                                let block = process_blocks.pop().unwrap();
+                                for orphan in orphan_buffer.orphans.clone() {
+                                    if orphan.get_parent() == block.hash() {
+                                        orphan_buffer.orphans.pop();
+                                        blockchain.insert(&orphan);
+                                        broadcast_blocks.push(block.hash());
+                                        process_blocks.push(block.clone());
+                                    }
+                                }
+                            }
+                            // blockchain.insert(&block);
+                            // broadcast_blocks.push(block.hash());
                         }
+                    }
+
+                    if parent_blocks.len() != 0 {
+                        // peer.write(Message::GetBlocks(parent_blocks));
+                        self.server.broadcast(Message::GetBlocks(parent_blocks));
                     }
                     //https://piazza.com/class/kykjhx727ab1ge?cid=84
                     if broadcast_blocks.len() != 0 {

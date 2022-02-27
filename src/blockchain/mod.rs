@@ -7,6 +7,8 @@ use super::types::transaction::SignedTransaction;
 use std::time::{SystemTime, UNIX_EPOCH};
 use rand::Rng;
 
+pub static DIFFICULTY: [u8; 32] = [0, 0, 64, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
+
 pub struct Blockchain {
     //map a block's hash to a tuple of (the block itself, height in blockchain)
     pub block_map: HashMap<H256, (Block, u32)>,
@@ -21,10 +23,12 @@ impl Blockchain {
         let genesis_parent_hash = H256::from([0; 32]);
         let mut rng = rand::thread_rng();
         let start = SystemTime::now();
-        let genesis_timestamp = start.duration_since(UNIX_EPOCH).expect("Time went backwards").as_micros();
+        //let genesis_timestamp = start.duration_since(UNIX_EPOCH).expect("Time went backwards").as_micros();
+        let genesis_timestamp = 0;
         let genesis_merkle_tree = MerkleTree::new(&Vec::<SignedTransaction>::new());
-        let genesis_difficulty = [255u8; 32].into();
-        let genesis_nonce = rng.gen::<u32>();
+        let genesis_difficulty = DIFFICULTY.into();
+        // let genesis_nonce = rng.gen::<u32>();
+        let genesis_nonce = 0;
         let genesis_height = 0;
 
         let genesis_header = Header {

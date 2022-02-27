@@ -8,7 +8,7 @@ use std::time;
 use std::thread;
 
 use crate::types::block::{Block, Header, Content};
-use crate::blockchain::Blockchain;
+use crate::blockchain::{Blockchain, DIFFICULTY};
 use crate::types::transaction::SignedTransaction;
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -134,6 +134,7 @@ impl Context {
                             }
                             ControlSignal::Update => {
                                 unimplemented!()
+                                // self.blockchain.lock().unwrap()
                             }
                         };
                     }
@@ -148,11 +149,11 @@ impl Context {
             // TODO for student: actual mining, create a block
             // TODO for student: if block mining finished, you can have something like: self.finished_block_chan.send(block.clone()).expect("Send finished block error");
             // let mut parent_ = self.blockchain.lock().unwrap().tip();
-            let mut parent_ = self.tip;
+            let mut parent_ = self.blockchain.lock().unwrap().tip();
             let start = SystemTime::now();
             let mut rng = rand::thread_rng();
             let timestamp_ = start.duration_since(UNIX_EPOCH).expect("Time went backwards").as_millis();
-            let difficulty_: H256 = [255u8; 32].into();
+            let difficulty_: H256 = DIFFICULTY.into();
             let merkle_tree_ = MerkleTree::new(&Vec::<SignedTransaction>::new());
             let nonce_ = rng.gen::<u32>();
             let header_ = Header {
@@ -170,7 +171,7 @@ impl Context {
                 content: content_
             };
             if block.hash() <= difficulty_ {
-                self.tip = block.hash();
+                //self.tip = block.hash();
                 self.finished_block_chan.send(block.clone()).expect("Send finished block error");
             }
 
