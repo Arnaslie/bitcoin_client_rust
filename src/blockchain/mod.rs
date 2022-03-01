@@ -7,7 +7,7 @@ use super::types::transaction::SignedTransaction;
 use std::time::{SystemTime, UNIX_EPOCH};
 use rand::Rng;
 
-pub static DIFFICULTY: [u8; 32] = [0, 0, 64, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
+pub static DIFFICULTY: [u8; 32] = [0, 0, 24, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
 
 pub struct Blockchain {
     //map a block's hash to a tuple of (the block itself, height in blockchain)

@@ -132,25 +132,33 @@ impl Worker {
                             }
 
                             //Orphan Buffer Check
+                            let mut keep_orphans = Vec::<Block>::new();
                             while !process_blocks.is_empty() {
                                 let block = process_blocks.pop().unwrap();
                                 for orphan in orphan_buffer.orphans.clone() {
+                                    //block is parent, don't keep orphan
                                     if orphan.get_parent() == block.hash() {
-                                        orphan_buffer.orphans.pop();
+                                        // orphan_buffer.orphans.pop();
                                         blockchain.insert(&orphan);
                                         broadcast_blocks.push(block.hash());
                                         process_blocks.push(block.clone());
-                                    }
+                                    } 
+                                    //block isn't parent, keep orphan
+                                    else { keep_orphans.push(orphan); }
                                 }
+                                //update orphan buffer with kept orphans & reset keep_orpans
+                                orphan_buffer.orphans = keep_orphans.clone();
+                                keep_orphans = Vec::<Block>::new();
                             }
+
                             // blockchain.insert(&block);
                             // broadcast_blocks.push(block.hash());
                         }
                     }
 
                     if parent_blocks.len() != 0 {
-                        // peer.write(Message::GetBlocks(parent_blocks));
-                        self.server.broadcast(Message::GetBlocks(parent_blocks));
+                        peer.write(Message::GetBlocks(parent_blocks));
+                        // self.server.broadcast(Message::GetBlocks(parent_blocks));
                     }
                     //https://piazza.com/class/kykjhx727ab1ge?cid=84
                     if broadcast_blocks.len() != 0 {
