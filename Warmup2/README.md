@@ -47,3 +47,5 @@ We provide (incomplete) auto-grader for you to test that your code format fits a
 bash autograder.sh
 ```
 And you can open the output file _log.txt_, and see whether the auto-grader's tests are passed. You need to have `bash`, `unzip`, and `python3` to run this double check.
+## Double check (windows)
+Same as warmup 1.

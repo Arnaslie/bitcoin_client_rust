@@ -16,11 +16,11 @@ You need to run the project on your machines. **We strongly recommend Linux or M
 ## Midterm Project
 
 - Team formation. Please form teams of 2 for this project. Due date: same as warmup 2.
-- [Part 1](MidtermProject1). 
-- [Part 2](MidtermProject2). 
-- [Part 3](MidtermProject3). 
-- [Part 4](MidtermProject4). (Will be released soon)
-- [Part 5](MidtermProject5). (Will be released soon)
+- [Part 1](MidtermProject1). Due date: 12:30pm CT, Feb 8, 2022.
+- [Part 2](MidtermProject2). Due date: 12:30pm CT, Feb 15, 2022.
+- [Part 3](MidtermProject3). Due date: 12:30pm CT, Feb 22, 2022.
+- [Part 4](MidtermProject4). Due date: 12:30pm CT, Mar 1, 2022.
+- [Part 5](MidtermProject5). Due date: 12:30pm CT, Mar 8, 2022.
 - [Part 6](MidtermProject6). (Will be released soon)
 - 
 ## Policy

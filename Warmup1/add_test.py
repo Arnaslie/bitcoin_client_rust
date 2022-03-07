@@ -43,7 +43,7 @@ mod tests {
 import re
 import sys
 import os.path as path
-file_path = path.join(sys.argv[1], 'src/types/address.rs')
+file_path = path.join(sys.argv[1], 'src','types','address.rs')
 print(path.dirname(file_path), end=' ')
 before_pat = r'// DO NOT CHANGE THIS COMMENT, IT IS FOR AUTOGRADER. BEFORE TEST'
 after_pat = r'// DO NOT CHANGE THIS COMMENT, IT IS FOR AUTOGRADER. AFTER TEST'
@@ -66,7 +66,7 @@ if change_before and change_after:
 else:
     print("\033[91m {}\033[00m".format("Code format wrong"))
 
-file_path = path.join(sys.argv[1], 'src/types/transaction.rs')
+file_path = path.join(sys.argv[1], 'src','types','transaction.rs')
 print(path.dirname(file_path), end=' ')
 before_pat = r'// DO NOT CHANGE THIS COMMENT, IT IS FOR AUTOGRADER. BEFORE TEST'
 after_pat = r'// DO NOT CHANGE THIS COMMENT, IT IS FOR AUTOGRADER. AFTER TEST'

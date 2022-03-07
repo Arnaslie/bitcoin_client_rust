@@ -19,7 +19,7 @@ mod tests {
 import re
 import sys
 import os.path as path
-file_path = path.join(sys.argv[1], 'src/blockchain/mod.rs')
+file_path = path.join(sys.argv[1], 'src','blockchain','mod.rs')
 print(path.dirname(file_path), end=' ')
 before_pat = r'// DO NOT CHANGE THIS COMMENT, IT IS FOR AUTOGRADER. BEFORE TEST'
 after_pat = r'// DO NOT CHANGE THIS COMMENT, IT IS FOR AUTOGRADER. AFTER TEST'

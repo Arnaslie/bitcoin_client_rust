@@ -79,7 +79,7 @@ test types::transaction::tests::sign_verify ... ok
 ```
 - To test your code, you are free to write more tests.
 
-## Double check
+## Double check (Unix)
 We provide (incomplete) auto-grader for you to test that your code format fits auto-grader. However, passing this auto-grader doesn't guarantee getting full grades. For this assignment, put your netid.zip file with [autograder.sh](autograder.sh) and [add_test.py](add_test.py) in a new directory, from where run
 ```
 bash autograder.sh
@@ -90,6 +90,10 @@ If you see "Code format wrong" on screen, your code may change the lines that sh
 
 If in _log.txt_ you cannot see correct log, your zip file may have incorrect directories for auto-grader to compile.
 
+## Double check (windows)
+Similar to Unix double checking auto-grader, we provide `autograder_windows.bat`. First, you need to manually unzip your netid.zip file, and put the `ece598pv-sp2022-main` folder inside a folder named after your netid. Make sure that `Cargo.toml` and `src/` is in `your-netid/ece598pv-sp2022-main`. Then double click `autograder_windows.bat`, enter your netid as instructed, and the result will be shown in a cmd window.
+
+You need to install `python3` to run it.
 ## Submission
 Download the zip file of your repo on gitlab. Rename it to your netid as `netid.zip`. Upload the zip file on compass2g. Please check your file size and it should not be very large.
 
