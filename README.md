@@ -20,8 +20,8 @@ You need to run the project on your machines. **We strongly recommend Linux or M
 - [Part 2](MidtermProject2). Due date: 12:30pm CT, Feb 15, 2022.
 - [Part 3](MidtermProject3). Due date: 12:30pm CT, Feb 22, 2022.
 - [Part 4](MidtermProject4). Due date: 12:30pm CT, Mar 1, 2022.
-- [Part 5](MidtermProject5). Due date: 12:30pm CT, Mar 8, 2022.
-- [Part 6](MidtermProject6). (Will be released soon)
+- [Part 5](MidtermProject5). Due date: 12:30pm CT, Mar 22, 2022.
+- [Part 6](MidtermProject6). Due date: 12:30pm CT, Mar 29, 2022.
 - 
 ## Policy
 Submissions later than due date will get 0 points.
