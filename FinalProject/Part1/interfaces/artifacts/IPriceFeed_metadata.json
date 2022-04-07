@@ -1,0 +1,64 @@
+{
+	"compiler": {
+		"version": "0.8.7+commit.e28d00a7"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [
+			{
+				"inputs": [],
+				"name": "getLatestPrice",
+				"outputs": [
+					{
+						"internalType": "int256",
+						"name": "price",
+						"type": "int256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "lastUpdatedTime",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			}
+		],
+		"devdoc": {
+			"kind": "dev",
+			"methods": {},
+			"version": 1
+		},
+		"userdoc": {
+			"kind": "user",
+			"methods": {},
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"FinalProject/Part1/interfaces/IPriceFeed.sol": "IPriceFeed"
+		},
+		"evmVersion": "london",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": false,
+			"runs": 200
+		},
+		"remappings": []
+	},
+	"sources": {
+		"FinalProject/Part1/interfaces/IPriceFeed.sol": {
+			"keccak256": "0x3acd58e8ef897470262abe1f4df7653fc516d7ca717b107e833a00a527becbdd",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://234153cc470c4ffb6475e29d976327b6f631fcf83ae652598a8bc5bd23865368",
+				"dweb:/ipfs/QmY9QgPjNZ3ujG2gXAH3FPbcwsEwsdzgBqdmVFaobcEch6"
+			]
+		}
+	},
+	"version": 1
+}

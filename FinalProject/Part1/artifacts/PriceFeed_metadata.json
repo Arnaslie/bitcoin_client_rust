@@ -1,0 +1,85 @@
+{
+	"compiler": {
+		"version": "0.8.7+commit.e28d00a7"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [
+			{
+				"inputs": [],
+				"stateMutability": "nonpayable",
+				"type": "constructor"
+			},
+			{
+				"inputs": [],
+				"name": "getLatestPrice",
+				"outputs": [
+					{
+						"internalType": "int256",
+						"name": "",
+						"type": "int256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			}
+		],
+		"devdoc": {
+			"kind": "dev",
+			"methods": {},
+			"version": 1
+		},
+		"userdoc": {
+			"kind": "user",
+			"methods": {},
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"FinalProject/Part1/PriceFeed.sol": "PriceFeed"
+		},
+		"evmVersion": "london",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": false,
+			"runs": 200
+		},
+		"remappings": []
+	},
+	"sources": {
+		"@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol": {
+			"keccak256": "0xf2b6c9adb3552254df1445b73563cf014434ff5e78663e9b961b6c059506ceb5",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://6c1f59e0c7334c22fb54288728fc32546bdc9c8133d6db0d60223e3c28f52120",
+				"dweb:/ipfs/QmeuxawUVBhMWQJXaEhhnubCTc4Jwn5wYK8gbhq6NjrpfG"
+			]
+		},
+		"FinalProject/Part1/PriceFeed.sol": {
+			"keccak256": "0xd7bde721d84834a2dbcf8fef09c4d73e5d18a23c609f9d3df1b9cc089dbae4ca",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://64061cc7d9e812ad9b325752bf193e8d8eb88ed7fb3e9c25bd6d005d7078abf4",
+				"dweb:/ipfs/QmXDNSYbUdG9vpvdvKSYmmDkHKiNEZfzwHRppBfPqUbNz9"
+			]
+		},
+		"FinalProject/Part1/interfaces/IPriceFeed.sol": {
+			"keccak256": "0x3acd58e8ef897470262abe1f4df7653fc516d7ca717b107e833a00a527becbdd",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://234153cc470c4ffb6475e29d976327b6f631fcf83ae652598a8bc5bd23865368",
+				"dweb:/ipfs/QmY9QgPjNZ3ujG2gXAH3FPbcwsEwsdzgBqdmVFaobcEch6"
+			]
+		}
+	},
+	"version": 1
+}

@@ -1,0 +1,14 @@
+/target
+debug/
+target/
+**/*.rs.bk
+.idea
+.DS_Store
+**/mw17.zip
+**/build_log.txt
+**/log.txt
+**/mw17/**
+**mw17.zip
+**/aliesis2-mw17/**
+**/598_Warmup_2.txt
+**/598_MP_7.txt
