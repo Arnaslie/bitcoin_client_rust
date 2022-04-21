@@ -42,7 +42,7 @@ There are some functions already implemented for the initial setup.
 The remaining functions are left for you to implement.
 
 * `openPosition`: Create a new position by transferring `collateralAmount` EUSD tokens from the message sender to the contract. Make sure the asset is registered and the input collateral ratio is not less than the asset MCR, then calculate the number of minted tokens to send to the message sender.
-* `closePosition`: Close a position when the position owner calls this function. Transfer the sAsset tokens from the message sender to the contract and burn these tokens. Transfer EUSD tokens locked in the position to the message sender. Finally, delete the position at the given index.
+* `closePosition`: Close a position when the position owner calls this function. Burn all sAsset tokens and transfer EUSD tokens locked in the position to the message sender. Finally, delete the position at the given index.
 * `deposit`: Add collateral amount of the position at the given index. Make sure the message sender owns the position and transfer deposited tokens from the sender to the contract.
 * `withdraw`: Withdraw collateral tokens from the position at the given index. Make sure the message sender owns the position and the collateral ratio won't go below the MCR. Transfer withdrawn tokens from the contract to the sender.
 * `mint`: Mint more asset tokens from the position at the given index. Make sure the message sender owns the position and the collateral ratio won't go below the MCR. 
