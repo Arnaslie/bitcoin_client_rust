@@ -37,7 +37,7 @@
 	},
 	"settings": {
 		"compilationTarget": {
-			"FinalProject/Part1/interfaces/IPriceFeed.sol": "IPriceFeed"
+			"Part1/interfaces/IPriceFeed.sol": "IPriceFeed"
 		},
 		"evmVersion": "london",
 		"libraries": {},
@@ -51,7 +51,7 @@
 		"remappings": []
 	},
 	"sources": {
-		"FinalProject/Part1/interfaces/IPriceFeed.sol": {
+		"Part1/interfaces/IPriceFeed.sol": {
 			"keccak256": "0x3acd58e8ef897470262abe1f4df7653fc516d7ca717b107e833a00a527becbdd",
 			"license": "MIT",
 			"urls": [

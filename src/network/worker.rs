@@ -1,12 +1,15 @@
 use super::message::Message;
 use super::peer;
 use super::server::Handle as ServerHandle;
+use crate::miner::Mempool;
 use crate::types::block::Block;
 use crate::types::hash::{H256, Hashable};
+use crate::types::transaction::{SignedTransaction, verify};
 use std::sync::{Arc, Mutex};
 use crate::blockchain::{Blockchain, DIFFICULTY};
 
-use log::{debug, warn, error};
+use log::{debug, warn, error, info};
+use serde::de;
 
 use std::thread;
 
@@ -20,6 +23,7 @@ pub struct Worker {
     num_worker: usize,
     server: ServerHandle,
     blockchain: Arc<Mutex<Blockchain>>,
+    mempool: Arc<Mutex<Mempool>>
 }
 
 pub struct OrphanBuffer {
@@ -40,12 +44,14 @@ impl Worker {
         msg_src: smol::channel::Receiver<(Vec<u8>, peer::Handle)>,
         server: &ServerHandle,
         blockchain: &Arc<Mutex<Blockchain>>,
+        mempool: &Arc<Mutex<Mempool>>
     ) -> Self {
         Self {
             msg_chan: msg_src,
             num_worker,
             server: server.clone(),
             blockchain: Arc::clone(blockchain),
+            mempool: Arc::clone(mempool)
         }
     }
 
@@ -83,6 +89,7 @@ impl Worker {
                     let blockchain = self.blockchain.lock().unwrap(); 
                     for block in block_hashes {
                         if !blockchain.block_map.contains_key(&block) {
+                            debug!("NewBlockHashes: {} --- Peer: {}", block.hash(), peer.addr().to_string());
                             missing_blocks.push(block);
                         }
                     }
@@ -91,11 +98,24 @@ impl Worker {
                         peer.write(Message::GetBlocks(missing_blocks));
                     }
                 }
+                Message::NewTransactionHashes(tx_hashes) => {
+                    let mut missing_txs: Vec<H256> = Vec::<H256>::new();
+                    let mempool = self.mempool.lock().unwrap();
+                    for tx in tx_hashes {
+                        if !mempool.transaction_set.contains(&tx) {
+                            missing_txs.push(tx);
+                        }
+                    }
+                    if missing_txs.len() != 0 {
+                        peer.write(Message::GetTransactions(missing_txs));
+                    }
+                }
                 Message::GetBlocks(blocks) => {
                     let mut send_blocks: Vec<Block> = Vec::<Block>::new();
                     let blockchain = self.blockchain.lock().unwrap(); 
                     for block in blocks {
                         if blockchain.block_map.contains_key(&block) {
+                            debug!("GetBlocks: {} --- Peer: {}", block.hash(), peer.addr().to_string());
                             let result: &(Block, u32) = blockchain.block_map.get(&block).unwrap();
                             send_blocks.push(result.0.clone());
                         }
@@ -105,6 +125,20 @@ impl Worker {
                         peer.write(Message::Blocks(send_blocks));
                     }
                 }
+                Message::GetTransactions(transactions) => {
+                    let mut send_transactions: Vec<SignedTransaction> = Vec::<SignedTransaction>::new();
+                    let mempool = self.mempool.lock().unwrap();
+                    for transaction in transactions {
+                        if mempool.transaction_map.contains_key(&transaction) {
+                            // info!("GETTING TX FOR NEIGHBOR: {}", transaction.hash());
+                            let result: &SignedTransaction = mempool.transaction_map.get(&transaction).unwrap();
+                            send_transactions.push(result.clone());
+                        }
+                    }
+                    if send_transactions.len() != 0 {
+                        peer.write(Message::Transactions(send_transactions));
+                    }
+                }
                 Message::Blocks(blocks) => {
                     let mut broadcast_blocks: Vec<H256> = Vec::<H256>::new();
                     let mut parent_blocks: Vec<H256> = Vec::<H256>::new();
@@ -112,17 +146,36 @@ impl Worker {
                     //process_blocks represents blocks to process for orphan blocks
                     let mut process_blocks = Vec::<Block>::new();
                     let mut orphan_buffer: OrphanBuffer = OrphanBuffer::new();
-                    for block in blocks {
+                    'block:for block in blocks {
                         if !blockchain.block_map.contains_key(&block.hash()) {
                             //Proof of Work
                             if !(block.hash() <= DIFFICULTY.into()) {
                                 continue;
                             }
+
+                            ///////////////Transaction Checks////////////////////////////////////////////////
+                            //TODO: add rest of checks:
+                            //1. (Will not be tested or graded at this stage.) In UTXO model, also check the public key(s)
+                            //  matches the owner(s)'s address of these inputs. In account based model,
+                            //  check if the public key matches the owner's address of the withdrawing account.
+                            //2. Double spend checks
+                            for transaction in block.get_content().data {
+                                if !verify(&transaction.transaction, &transaction.public_key, &transaction.signature) {
+                                    debug!("BLOCK NOT VERIFIED: {}", block.hash());
+                                    continue 'block;
+                                }
+                            }
+                            //////////////////////////////////////////////////////////////////////////////////
                             
                             //Parent Check/Orphan Block Check
                             let parent_hash = block.get_parent();
                             if blockchain.block_map.contains_key(&parent_hash) {
+                                debug!("New Block: {} --- Peer: {}", block.hash(), peer.addr().to_string());
                                 blockchain.insert(&block);
+                                let mut mempool = self.mempool.lock().unwrap();
+                                for tx in block.content.data.clone() {
+                                    mempool.remove(&tx.hash());
+                                }
                                 broadcast_blocks.push(block.hash());
                                 //need to check for orphans
                                 process_blocks.push(block.clone());
@@ -139,7 +192,12 @@ impl Worker {
                                     //block is parent, don't keep orphan
                                     if orphan.get_parent() == block.hash() {
                                         // orphan_buffer.orphans.pop();
+                                        debug!("New Block: {} --- Peer: {}", block.hash(), peer.addr().to_string());
                                         blockchain.insert(&orphan);
+                                        let mut mempool = self.mempool.lock().unwrap();
+                                        for tx in block.content.data.clone() {
+                                            mempool.remove(&tx.hash());
+                                        }
                                         broadcast_blocks.push(block.hash());
                                         process_blocks.push(block.clone());
                                     } 
@@ -163,6 +221,28 @@ impl Worker {
                     //https://piazza.com/class/kykjhx727ab1ge?cid=84
                     if broadcast_blocks.len() != 0 {
                         self.server.broadcast(Message::NewBlockHashes(broadcast_blocks));
+                    }
+                }
+                Message::Transactions(txs) => {
+                    let mut broadcast_transactions: Vec<H256> = Vec::<H256>::new();
+                    let mut mempool = self.mempool.lock().unwrap();
+                    for transaction in txs {
+                        //TODO: add rest of checks:
+                        //1. (Will not be tested or graded at this stage.) In UTXO model, also check the public key(s)
+                        //  matches the owner(s)'s address of these inputs. In account based model,
+                        //  check if the public key matches the owner's address of the withdrawing account.
+                        //2. Double spend checks
+                        if verify(&transaction.transaction, &transaction.public_key, &transaction.signature) {
+                            // debug!("New Transaction: {}", transaction.hash());
+                            // if !mempool.transaction_map.contains_key(&transaction.hash()) {
+                                broadcast_transactions.push(transaction.hash());
+                                mempool.insert(&transaction);
+                            // }
+                        }
+                    }
+
+                    if broadcast_transactions.len() != 0 {
+                        self.server.broadcast(Message::NewTransactionHashes(broadcast_transactions));
                     }
                 }
                 _ => unimplemented!(),
@@ -196,8 +276,10 @@ fn generate_test_worker_and_start() -> (TestMsgSender, ServerTestReceiver, Vec<H
     let (test_msg_sender, msg_chan) = TestMsgSender::new();
     let blockchain = Blockchain::new();
     let blockchain = Arc::new(Mutex::new(blockchain));
+    let mempool = Mempool::new();
+    let mempool = Arc::new(Mutex::new(mempool));
     let tip = blockchain.lock().unwrap().tip();
-    let worker = Worker::new(1, msg_chan, &server, &blockchain);
+    let worker = Worker::new(1, msg_chan, &server, &blockchain, &mempool);
     worker.start(); 
     (test_msg_sender, server_receiver, vec![tip])
 }

@@ -42,7 +42,7 @@
 	},
 	"settings": {
 		"compilationTarget": {
-			"FinalProject/Part1/PriceFeed.sol": "PriceFeed"
+			"Part1/PriceFeed.sol": "PriceFeed"
 		},
 		"evmVersion": "london",
 		"libraries": {},
@@ -64,7 +64,7 @@
 				"dweb:/ipfs/QmeuxawUVBhMWQJXaEhhnubCTc4Jwn5wYK8gbhq6NjrpfG"
 			]
 		},
-		"FinalProject/Part1/PriceFeed.sol": {
+		"Part1/PriceFeed.sol": {
 			"keccak256": "0xd7bde721d84834a2dbcf8fef09c4d73e5d18a23c609f9d3df1b9cc089dbae4ca",
 			"license": "MIT",
 			"urls": [
@@ -72,7 +72,7 @@
 				"dweb:/ipfs/QmXDNSYbUdG9vpvdvKSYmmDkHKiNEZfzwHRppBfPqUbNz9"
 			]
 		},
-		"FinalProject/Part1/interfaces/IPriceFeed.sol": {
+		"Part1/interfaces/IPriceFeed.sol": {
 			"keccak256": "0x3acd58e8ef897470262abe1f4df7653fc516d7ca717b107e833a00a527becbdd",
 			"license": "MIT",
 			"urls": [

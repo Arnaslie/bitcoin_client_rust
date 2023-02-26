@@ -1,8 +1,10 @@
 use serde::Serialize;
 use crate::blockchain::Blockchain;
 use crate::miner::Handle as MinerHandle;
+use crate::transaction_generator::Handle as TxGeneratorHandle;
 use crate::network::server::Handle as NetworkServerHandle;
 use crate::network::message::Message;
+use crate::types::hash::{H256, Hashable};
 
 use log::info;
 use std::collections::HashMap;
@@ -16,6 +18,7 @@ use url::Url;
 pub struct Server {
     handle: HTTPServer,
     miner: MinerHandle,
+    tx_generator: TxGeneratorHandle,
     network: NetworkServerHandle,
     blockchain: Arc<Mutex<Blockchain>>,
 }
@@ -51,6 +54,7 @@ impl Server {
     pub fn start(
         addr: std::net::SocketAddr,
         miner: &MinerHandle,
+        tx_generator: &TxGeneratorHandle,
         network: &NetworkServerHandle,
         blockchain: &Arc<Mutex<Blockchain>>,
     ) {
@@ -58,12 +62,14 @@ impl Server {
         let server = Self {
             handle,
             miner: miner.clone(),
+            tx_generator: tx_generator.clone(),
             network: network.clone(),
             blockchain: Arc::clone(blockchain),
         };
         thread::spawn(move || {
             for req in server.handle.incoming_requests() {
                 let miner = server.miner.clone();
+                let tx_generator = server.tx_generator.clone();
                 let network = server.network.clone();
                 let blockchain = Arc::clone(&server.blockchain);
                 thread::spawn(move || {
@@ -102,8 +108,28 @@ impl Server {
                             respond_result!(req, true, "ok");
                         }
                         "/tx-generator/start" => {
-                            // unimplemented!()
-                            respond_result!(req, false, "unimplemented!");
+                            let params = url.query_pairs();
+                            let params: HashMap<_, _> = params.into_owned().collect();
+                            let theta = match params.get("theta") {
+                                Some(v) => v,
+                                None => {
+                                    respond_result!(req, false, "missing theta");
+                                    return;
+                                }
+                            };
+                            let theta = match theta.parse::<u64>() {
+                                Ok(v) => v,
+                                Err(e) => {
+                                    respond_result!(
+                                        req,
+                                        false,
+                                        format!("error parsing theta: {}", e)
+                                    );
+                                    return;
+                                }
+                            };
+                            tx_generator.start(5000*theta);
+                            respond_result!(req, true, "ok");
                         }
                         "/network/ping" => {
                             network.broadcast(Message::Ping(String::from("Test ping")));
@@ -116,11 +142,26 @@ impl Server {
                             respond_json!(req, v_string);
                         }
                         "/blockchain/longest-chain-tx" => {
-                            // unimplemented!()
-                            respond_result!(req, false, "unimplemented!");
+                            let blockchain = blockchain.lock().unwrap();
+                            let blocks = blockchain.all_blocks_in_longest_chain();
+                            let mut txs = Vec::<Vec::<H256>>::new();
+                            for block_hash in blocks.clone() {
+                                let mut txs2 = Vec::<H256>::new();
+                                let (block, _) = blockchain.block_map.get(&block_hash).unwrap();
+                                for transaction in block.get_content().data.clone() {
+                                    txs2.push(transaction.hash());
+                                }
+                                txs.push(txs2);
+                            }
+                            let mut txs_string: Vec<Vec<String>> = Vec::<Vec<String>>::new();
+                            for vec in txs {
+                                let vecs: Vec<String> = vec.into_iter().map(|h|h.to_string()).collect();
+                                txs_string.push(vecs);
+                            }
+                            // let txs_string: Vec<Vec<String>> = txs.into_iter().map(|h|h.into_iter().map(|f |f.to_string())).collect();
+                            respond_json!(req, txs_string);
                         }
                         "/blockchain/longest-chain-tx-count" => {
-                            // unimplemented!()
                             respond_result!(req, false, "unimplemented!");
                         }
                         _ => {

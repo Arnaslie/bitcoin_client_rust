@@ -4,10 +4,12 @@ use crate::types::hash::{H256, Hashable};
 use super::types::block::{Block, Content, Header};
 use super::types::merkle::MerkleTree;
 use super::types::transaction::SignedTransaction;
-use std::time::{SystemTime, UNIX_EPOCH};
-use rand::Rng;
 
-pub static DIFFICULTY: [u8; 32] = [0, 0, 24, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
+// pub static DIFFICULTY: [u8; 32] = [0, 2, 200, 200, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+//                                    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+//                                    255, 255, 255, 255, 255, 255, 255];
+
+pub static DIFFICULTY: [u8; 32] = [0, 3, 100, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
 
 pub struct Blockchain {
     //map a block's hash to a tuple of (the block itself, height in blockchain)
@@ -21,13 +23,9 @@ impl Blockchain {
     /// Create a new blockchain, only containing the genesis block
     pub fn new() -> Self {
         let genesis_parent_hash = H256::from([0; 32]);
-        let mut rng = rand::thread_rng();
-        let start = SystemTime::now();
-        //let genesis_timestamp = start.duration_since(UNIX_EPOCH).expect("Time went backwards").as_micros();
         let genesis_timestamp = 0;
         let genesis_merkle_tree = MerkleTree::new(&Vec::<SignedTransaction>::new());
         let genesis_difficulty = DIFFICULTY.into();
-        // let genesis_nonce = rng.gen::<u32>();
         let genesis_nonce = 0;
         let genesis_height = 0;
 
@@ -62,7 +60,7 @@ impl Blockchain {
     pub fn insert(&mut self, block: &Block) {
         let new_block_hash = block.hash();
         let new_block_parent_hash = block.get_parent();
-        let (new_block_parent, new_block_parent_height) = self.block_map.get(&new_block_parent_hash).unwrap();
+        let (_, new_block_parent_height) = self.block_map.get(&new_block_parent_hash).unwrap();
         let new_block_height;
 
         //means we are inserting a new block to the current tip -> UPDATE tip and height

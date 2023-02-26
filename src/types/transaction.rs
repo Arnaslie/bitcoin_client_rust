@@ -1,5 +1,5 @@
 use serde::{Serialize,Deserialize};
-use ring::signature::{Ed25519KeyPair, Signature, KeyPair, VerificationAlgorithm, EdDSAParameters, self};
+use ring::signature::{Ed25519KeyPair, Signature, self};
 use rand::Rng;
 
 use super::address::Address;
@@ -7,16 +7,17 @@ use super::hash::{H256, Hashable};
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct Transaction {
-    sender: Address,
-    receiver: Address,
-    value: i32
+    pub sender: Address,
+    pub account_nonce: i32,
+    pub receiver: Address,
+    pub value: i32
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct SignedTransaction {
-    transaction: Transaction,
-    signature: Vec<u8>,
-    public_key: Vec<u8>
+    pub transaction: Transaction,
+    pub signature: Vec<u8>,
+    pub public_key: Vec<u8>
 }
 
 impl Hashable for SignedTransaction {
@@ -45,7 +46,7 @@ pub fn generate_random_transaction() -> Transaction {
     let random_value: i32 = rng.gen::<i32>();
     let random_receiver: [u8; 20] = rng.gen::<[u8; 20]>();
     let random_sender: [u8; 20] = rng.gen::<[u8; 20]>();
-    return Transaction {sender: Address::from(random_sender), receiver: Address::from(random_receiver), value: random_value};
+    return Transaction {sender: Address::from(random_sender), receiver: Address::from(random_receiver), value: random_value, account_nonce:0};
 }
 
 // DO NOT CHANGE THIS COMMENT, IT IS FOR AUTOGRADER. BEFORE TEST

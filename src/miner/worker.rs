@@ -1,5 +1,5 @@
-use crossbeam::channel::{unbounded, Receiver, Sender, TryRecvError};
-use log::{debug, info};
+use crossbeam::channel::{Receiver};
+use log::{info, debug};
 use crate::network::message::Message;
 use crate::types::hash::H256;
 use crate::types::{block::Block, hash::Hashable};
@@ -40,13 +40,12 @@ impl Worker {
 
     fn worker_loop(&self) {
         loop {
-            // TODO for student: insert this finished block to blockchain, and broadcast this block hash
             let _block = self.finished_block_chan.recv().expect("Receive finished block error");
             let mut blockchain_ = self.blockchain.lock().unwrap();
             blockchain_.insert(&_block);
-            
             let mut block_to_send = Vec::<H256>::new();
             block_to_send.push(_block.hash());
+            debug!("SENDING BLOCK: {}", _block.hash());
             self.server.broadcast(Message::NewBlockHashes(block_to_send));
         }
     }
